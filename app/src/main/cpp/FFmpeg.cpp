@@ -108,10 +108,9 @@ void *play(void *args){
                 ffmpeg->video_channel->packets.push(packet);
             } else if (ffmpeg->audio_channel &&
                        packet->stream_index == ffmpeg->audio_channel->index) {
-
+                ffmpeg->audio_channel->packets.push(packet);
             } else {
-                //其他解码器
-                LOGE("未知处理器");
+                LOGE("未知包，未处理");
             }
         } else if (ret == AVERROR_EOF) { //读取完成，但是还没完成播放
             //
@@ -126,6 +125,10 @@ void FFmpeg::start() {
     isPlaying = 1;
     if (video_channel) {
         video_channel->play();
+    }
+    //声音解码与播放
+    if (audio_channel) {
+        audio_channel->play();
     }
     pthread_create(&pid_play, 0, play, this);
 }

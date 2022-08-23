@@ -69,6 +69,7 @@ target_link_libraries( # Specifies the target library.
         swscale
 
         android
+        OpenSLES
         # Links the target library to the log library
         # included in the NDK.
         ${log-lib})

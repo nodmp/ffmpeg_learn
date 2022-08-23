@@ -49,7 +49,7 @@ public:
     //play -> 纯虚方法
     virtual void play() = 0;
 
-    int isPlaying;
+    int isPlaying = 0;
     int index;
 
     AVCodecContext *avCodecContext;
