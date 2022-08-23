@@ -8,6 +8,11 @@
 #include "BaseChannel.h"
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
+#include "utils.h"
+
+extern  "C"{
+#include <libswresample/swresample.h>
+};
 
 class AudioChannel: public BaseChannel{
 public:
@@ -33,6 +38,11 @@ private:
     SLObjectItf bqPlayerObject = nullptr;
     SLPlayItf bqPlayerPlay = nullptr;
     SLAndroidSimpleBufferQueueItf bqPlayerBufferQueue = nullptr;
+
+    //重采样
+    SwrContext * swrContext;
+    uint8_t *buffer;
+    friend void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context);
 
 };
 

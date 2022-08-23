@@ -5,31 +5,48 @@
 #include "AudioChannel.h"
 
 void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context){
-    AudioChannel *audioChannel = static_cast<AudioChannel *>(context);
-    audioChannel->getPcm();
+    LOGE("回调执行次数 + 1");
+
+    auto *audioChannel = static_cast<AudioChannel *>(context);
+    //获取pcm数据，多少字节
+    int dataSize = audioChannel->getPcm();
+    if (dataSize > 0) {
+        //接受16位数据，所以获取的datasize是8位的大小，所以/2
+        (*bq)->Enqueue(bq, audioChannel->buffer, dataSize / 2);
+    }
 }
 void *audio_decode_task(void *arg){
-    AudioChannel *audioChannel = static_cast<AudioChannel *>(arg);
+    auto *audioChannel = static_cast<AudioChannel *>(arg);
+    audioChannel->decode();
     return nullptr;
 }
 
 void *audio_play_task(void *arg){
-    AudioChannel *audioChannel = static_cast<AudioChannel *>(arg);
+    auto *audioChannel = static_cast<AudioChannel *>(arg);
     audioChannel->audio_play();
     return nullptr;
 }
 AudioChannel::AudioChannel(int index, AVCodecContext *pContext) : BaseChannel(index, pContext) {
+    buffer = static_cast<uint8_t *>(malloc(44100 * 2 * 2));
+    memset(buffer, 0, 44100 * 2 * 2);
 
 }
 
 AudioChannel::~AudioChannel() {
-
+    if (buffer) {
+        free(buffer);
+    }
 }
 
 void AudioChannel::play() {
     isPlaying = 1;
     packets.setWork(1);
     frames.setWork(1);
+    //0 + 输出声道 + 输出采样位 + 输出采样率
+    swrContext = swr_alloc_set_opts(nullptr, AV_CH_LAYOUT_STEREO, AV_SAMPLE_FMT_S16, 44100,
+                                    avCodecContext->channel_layout, avCodecContext->sample_fmt,
+                                    avCodecContext->sample_rate, 0, 0);
+    swr_init(swrContext);
     pthread_create(&pid_audio_decode, 0, audio_decode_task, this);
     pthread_create(&pid_audio_play, 0, audio_play_task, this);
 }
@@ -56,7 +73,7 @@ void AudioChannel::decode() {
         } else if (ret != 0) {
             break;
         }
-        //重新开一个线程，来播放数据
+        LOGE("插入音频数据");
         frames.push(frame);
     }
     releaseAvPacket(&packet);
@@ -68,7 +85,7 @@ void AudioChannel::audio_play() {
 
     // create engine
     result = slCreateEngine(&engineObject, 0, NULL, 0, NULL, NULL);
-    if (SL_RESULT_SUCCESS == result){
+    if (SL_RESULT_SUCCESS != result) {
         return;
     }
     // realize the engine
@@ -85,13 +102,13 @@ void AudioChannel::audio_play() {
     //设置混音器
     // create output mix, with environmental reverb specified as a non-required interface
     result = (*engineEngine)->CreateOutputMix(engineEngine, &outputMixObject, 0, 0, 0);
-    if (SL_RESULT_SUCCESS == result){
+    if (SL_RESULT_SUCCESS != result){
         return;
     }
 
     // realize the output mix
     result = (*outputMixObject)->Realize(outputMixObject, SL_BOOLEAN_FALSE);
-    if (SL_RESULT_SUCCESS == result){
+    if (SL_RESULT_SUCCESS != result){
         return;
     }
 
@@ -139,6 +156,25 @@ void AudioChannel::audio_play() {
 
 //返回pcm数据大小
 int AudioChannel::getPcm() {
+    int data_size = 0;
+    AVFrame *frame = nullptr;
+    int ret = frames.pop(frame);
 
+    if (!isPlaying) {
+        if (ret) {
+            releaseAvFrame(&frame);
+        }
+        return data_size;
+    }
+    //将nbsameples个数据由sample_rate采样率转为44100后返回多少数据
+    int64_t delays = swr_get_delay(swrContext, frame->sample_rate); //
+    int64_t nb = av_rescale_rnd(delays + frame->nb_samples, 44100, frame->sample_rate, AV_ROUND_UP);
+    //44100 * 2 (声道数) 获取数据
+    int samples = swr_convert(swrContext, &buffer, nb,
+                              const_cast<const uint8_t **>(frame->data),
+                              frame->nb_samples);
+    data_size = samples * 2 * 2;
+    return data_size;
+    //重采样，
 }
 

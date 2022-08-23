@@ -30,6 +30,8 @@ class MainActivity : AppCompatActivity() {
             player.prepare()
         }
         player.surfaceView = surfaceView
+//        player.dataSource =
+//            "http://vfx.mtime.cn/Video/2019/02/04/mp4/190204084208765161.mp4"
         player.dataSource =
             "http://devimages.apple.com.edgekey.net/streaming/examples/bipbop_4x3/gear2/prog_index.m3u8"
         player.setPrepareListener {

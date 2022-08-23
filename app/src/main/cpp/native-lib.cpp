@@ -34,6 +34,7 @@ void RenderMethodCallback(uint8_t *data, int line, int w, int h) {
     if (ANativeWindow_lock(window, &window_buffer, 0)) {
         ANativeWindow_release(window);
         window = nullptr;
+        pthread_mutex_unlock(&mutex);
         return;
     }
     uint8_t *dst_data = static_cast<uint8_t *>(window_buffer.bits);
