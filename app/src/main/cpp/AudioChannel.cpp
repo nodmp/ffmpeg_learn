@@ -27,9 +27,11 @@ void *audio_play_task(void *arg){
     return nullptr;
 }
 AudioChannel::AudioChannel(int index, AVCodecContext *pContext) : BaseChannel(index, pContext) {
-    buffer = static_cast<uint8_t *>(malloc(44100 * 2 * 2));
-    memset(buffer, 0, 44100 * 2 * 2);
-
+    out_channels = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
+    out_samplesize = av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+    out_sample_rate = 44100;
+    buffer = static_cast<uint8_t *>(malloc(out_sample_rate * out_channels * out_samplesize));
+    memset(buffer, 0, out_sample_rate * out_channels * out_samplesize);
 }
 
 AudioChannel::~AudioChannel() {
@@ -168,12 +170,12 @@ int AudioChannel::getPcm() {
     }
     //将nbsameples个数据由sample_rate采样率转为44100后返回多少数据
     int64_t delays = swr_get_delay(swrContext, frame->sample_rate); //
-    int64_t nb = av_rescale_rnd(delays + frame->nb_samples, 44100, frame->sample_rate, AV_ROUND_UP);
+    int64_t nb = av_rescale_rnd(delays + frame->nb_samples, out_sample_rate, frame->sample_rate, AV_ROUND_UP);
     //44100 * 2 (声道数) 获取数据
     int samples = swr_convert(swrContext, &buffer, nb,
                               const_cast<const uint8_t **>(frame->data),
                               frame->nb_samples);
-    data_size = samples * 2 * 2;
+    data_size =  samples * out_samplesize * out_channels ;
     return data_size;
     //重采样，
 }

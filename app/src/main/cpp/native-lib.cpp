@@ -39,9 +39,10 @@ void RenderMethodCallback(uint8_t *data, int line, int w, int h) {
     }
     uint8_t *dst_data = static_cast<uint8_t *>(window_buffer.bits);
     int dst_linesize = window_buffer.stride * 4; //
+
     // one by one
     for (int i = 0; i < window_buffer.height; ++i) {
-        memcpy(dst_data + i * dst_linesize, data + i * line, dst_linesize);
+        memcpy(dst_data + i * dst_linesize, data + i * line, line);
     }
     ANativeWindow_unlockAndPost(window);
     pthread_mutex_unlock(&mutex);

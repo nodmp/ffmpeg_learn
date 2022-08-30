@@ -29,6 +29,10 @@ public:
 
     int getPcm();
 
+public:
+    int out_channels;
+    int out_samplesize;
+    int out_sample_rate;
 private:
     pthread_t pid_audio_decode;
     pthread_t pid_audio_play;
