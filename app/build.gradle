@@ -6,6 +6,10 @@ plugins {
 android {
     compileSdk 32
 
+    packagingOptions {
+        doNotStrip "*/*/*.so"
+    }
+
     defaultConfig {
         applicationId "com.kyle.ffmpeg"
         minSdk 21
@@ -51,7 +55,7 @@ android {
 }
 
 dependencies {
-
+    implementation 'com.iqiyi.xcrash:xcrash-android-lib:3.0.0'
     implementation 'androidx.core:core-ktx:1.7.0'
     implementation 'androidx.appcompat:appcompat:1.4.2'
     implementation 'com.google.android.material:material:1.6.1'
